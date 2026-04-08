@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Tax Freeze Strategy Tool</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: -apple-system, sans-serif; background: #f0f2f5; padding: 20px; color: #1a202c; }
+        .card { background: white; padding: 30px; border-radius: 15px; max-width: 1000px; margin: auto; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        
+        .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #edf2f7; padding-bottom: 20px; }
+        input { padding: 12px; width: 200px; border: 2px solid #cbd5e0; border-radius: 8px; font-size: 1.1rem; }
+        button { padding: 12px 24px; background: #2b6cb0; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        
+        .grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-top: 20px; }
+        .col { padding: 20px; border-radius: 12px; border: 2px solid #e2e8f0; text-align: center; display: flex; flex-direction: column; justify-content: space-between; }
+        
+        .freeze-col { border-color: #48bb78; background: #f0fff4; }
+        .growth-col { border-color: #4299e1; background: #ebf8ff; }
+        .jump-col { border-color: #ed8936; background: #fffaf0; }
+
+        .big-num { font-size: 1.8rem; font-weight: 800; display: block; margin: 10px 0; }
+        .label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; color: #4a5568; font-weight: bold; }
+        
+        .winner-box { margin-top: 30px; padding: 25px; background: #2d3748; color: white; border-radius: 12px; text-align: center; }
+        .savings-highlight { color: #68d391; font-size: 2.5rem; font-weight: bold; display: block; margin: 10px 0; }
+        
+        .chart-container { height: 350px; margin-top: 30px; }
+        ul { list-style: none; padding: 0; font-size: 0.85rem; text-align: left; margin: 15px auto; width: fit-content; }
+        li { padding: 3px 0; border-bottom: 1px solid rgba(0,0,0,0.05); }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <div class="header">
+        <h2>School Tax Impact: 2020 to 2026</h2>
+        <p>Enter your 2020 tax amount to see which path saves you more.</p>
+        <input type="number" id="taxInput" value="12000">
+        <button onclick="calculateSavings()">Compare Paths</button>
+    </div>
+
+    <div class="grid">
+        <div class="col freeze-col">
+            <div>
+                <span class="label">Scenario A: 0% Freeze</span>
+                <span id="fTotal" class="big-num" style="color:#2f855a;">$0</span>
+                <p><small>Total Paid (2020-2025)</small></p>
+            </div>
+            <ul id="fList"></ul>
+        </div>
+
+        <div class="col growth-col">
+            <div>
+                <span class="label">Scenario B: 2% Growth</span>
+                <span id="gTotal" class="big-num" style="color:#2b6cb0;">$0</span>
+                <p><small>Total Paid (2020-2025)</small></p>
+            </div>
+            <ul id="gList"></ul>
+        </div>
+
+        <div class="col jump-col">
+            <span class="label">The Year 6 Bill (2026)</span>
+            <div style="margin-top:15px;">
+                <span id="jumpBill" class="big-num" style="color:#c05621;">$0</span>
+                <p><small>With 12% Jump</small></p>
+                <hr style="border:0; border-top:1px solid #ecc94b; margin:15px 0;">
+                <span id="normBill" class="big-num" style="color:#2d3748;">$0</span>
+                <p><small>With 2% Path</small></p>
+            </div>
+        </div>
+    </div>
+
+    <div class="winner-box">
+        <span class="label" style="color:#cbd5e0;">Total Money Saved in Your Bank Account</span>
+        <span id="bankCash" class="savings-highlight">$0</span>
+        <p id="verdictText">Calculating the winner...</p>
+    </div>
+
+    <div class="chart-container">
+        <canvas id="mainChart"></canvas>
+    </div>
+</div>
+
+<script>
+let myChart = null;
+
+function calculateSavings() {
+    let start = parseFloat(document.getElementById('taxInput').value) || 10000;
+
+    let fPaid = 0;
+    let gPaid = 0;
+    let labels = [];
+    let fData = [];
+    let gData = [];
+    let fListHtml = "";
+    let gListHtml = "";
+
+    // 2020 to 2025 Comparison
+    for (let i = 0; i < 6; i++) {
+        let yr = 2020 + i;
+        labels.push(yr);
+
+        // Freeze Data
+        let ft = start;
+        fPaid += ft;
+        fData.push(ft);
+        fListHtml += `<li>${yr}: $${ft.toLocaleString()}</li>`;
+
+        // 2% Growth Data
+        let gt = Math.round(start * Math.pow(1.02, i));
+        gPaid += gt;
+        gData.push(gt);
+        gListHtml += `<li>${yr}: $${gt.toLocaleString()}</li>`;
+    }
+
+    // Year 6 Values
+    let jumpAmt = Math.round(start * 1.12);
+    let normAmt = Math.round(start * Math.pow(1.02, 6));
+
+    // Update Text Fields
+    document.getElementById('fTotal').innerText = "$" + fPaid.toLocaleString();
+    document.getElementById('gTotal').innerText = "$" + gPaid.toLocaleString();
+    document.getElementById('fList').innerHTML = fListHtml;
+    document.getElementById('gList').innerHTML = gListHtml;
+    
+    document.getElementById('jumpBill').innerText = "$" + jumpAmt.toLocaleString();
+    document.getElementById('normBill').innerText = "$" + normAmt.toLocaleString();
+
+    let saved = gPaid - fPaid;
+    document.getElementById('bankCash').innerText = "$" + saved.toLocaleString();
+    document.getElementById('verdictText').innerHTML = 
+        `By keeping your tax flat for 5 years, you effectively <strong>stashed $${saved.toLocaleString()} in the bank</strong>. <br>Even though your 2026 bill is now $${jumpAmt.toLocaleString()}, you are still ahead by the total amount saved during the freeze.`;
+
+    renderGraph(labels, fData, gData);
+}
+
+function renderGraph(l, f, g) {
+    const ctx = document.getElementById('mainChart').getContext('2d');
+    if (myChart) myChart.destroy();
+    myChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: l,
+            datasets: [
+                { label: 'Freeze Path', data: f, borderColor: '#48bb78', backgroundColor: 'rgba(72, 187, 120, 0.1)', fill: true, tension: 0.1 },
+                { label: '2% Growth Path', data: g, borderColor: '#4299e1', fill: false, tension: 0.1 }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: 'bottom' } },
+            scales: { y: { title: { display: true, text: 'Annual Tax Bill ($)' } } }
+        }
+    });
+}
+
+// Auto-run on open
+calculateSavings();
+</script>
+
+</body>
+</html>
